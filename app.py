@@ -18,14 +18,14 @@ with col2:
     allowance = st.number_input("今月支給額", min_value=0, step=1000, value=300000)
 
 st.subheader("2. ファイルのアップロード")
-# レシート画像のアップロード（大文字の拡張子やHEIC形式も追加して表示されない問題を解決）
+# レシート画像のアップロード
 uploaded_images = st.file_uploader(
-    "レシート画像または動画をアップロード（複数可）", 
+    "レシート画像または動画をドラッグ＆ドロップ（複数可）", 
     accept_multiple_files=True
 )
 
 # マスターエクセルのアップロード
-uploaded_excel = st.file_uploader("マスターエクセル（追記先）をアップロード", type=["xlsx", "XLSX"])
+uploaded_excel = st.file_uploader("マスターエクセル（追記先）をドラッグ＆ドロップ")
 
 # --- 実行ボタン ---
 st.subheader("3. 処理の実行")
