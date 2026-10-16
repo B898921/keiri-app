@@ -2,11 +2,10 @@ import streamlit as st
 import time
 import copy
 import json
-import os
 import tempfile
 import openpyxl
 from openpyxl.styles import Alignment
-import google.generativeai as genai
+from google import genai
 
 # ページの設定
 st.set_page_config(page_title="小口現金 自動精算アプリ", layout="centered")
@@ -24,11 +23,7 @@ st.title("🧾 小口現金 自動精算アプリ")
 st.write("レシート画像とマスターエクセルをドラッグ＆ドロップすると、AIが読み取ってエクセルに自動追記します。")
 
 # --- APIキーの設定 ---
-# StreamlitのSecretsからAPIキーを読み込んでGeminiを設定
-try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-except KeyError:
-    st.error("APIキーが設定されていません。StreamlitのSecretsを確認してください。")
+api_key = st.secrets.get("GEMINI_API_KEY")
 
 # --- 入力フォーム ---
 st.subheader("1. 基本情報の入力")
@@ -49,13 +44,13 @@ uploaded_excel = st.file_uploader("マスターエクセル（追記先）をド
 # --- 実行ボタン ---
 st.subheader("3. 処理の実行")
 if st.button("データ抽出＆エクセル追記を開始"):
-    if not name or not uploaded_images or not uploaded_excel:
-        st.warning("氏名、レシート画像（動画）、マスターエクセルのすべてを入力・セットしてください。")
+    if not name or not uploaded_images or not uploaded_excel or not api_key:
+        st.warning("氏名、レシート画像（動画）、マスターエクセル、およびAPIキーの設定を確認してください。")
     else:
         with st.spinner("AIがレシートを解析し、エクセルに書き込んでいます...（数分かかる場合があります）"):
             try:
-                # 1. 画像/動画をGeminiにアップロードして読み取らせる
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # 1. 新しいGemini Clientの初期化
+                client = genai.Client(api_key=api_key)
                 
                 # プロンプト（AIへの複雑な指示ルール）
                 prompt = """
@@ -82,20 +77,26 @@ if st.button("データ抽出＆エクセル追記を開始"):
                 # 一時ファイルとして保存してAIに渡す準備
                 uploaded_to_gemini = []
                 for file in uploaded_images:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix="." + file.name.split(".")[-1]) as tmp:
+                    suffix = "." + file.name.split(".")[-1] if "." in file.name else ".jpg"
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
                         tmp.write(file.getvalue())
                         tmp_path = tmp.name
                     
                     # Geminiにファイルをアップロード
-                    gemini_file = genai.upload_file(tmp_path)
+                    gemini_file = client.files.upload(file=tmp_path)
+                    
                     # 動画などの場合は処理完了を待つ
                     while gemini_file.state.name == "PROCESSING":
                         time.sleep(2)
-                        gemini_file = genai.get_file(gemini_file.name)
+                        gemini_file = client.files.get(name=gemini_file.name)
+                        
                     uploaded_to_gemini.append(gemini_file)
 
-                # AIに解析を実行させる
-                response = model.generate_content([prompt] + uploaded_to_gemini)
+                # AIに解析を実行させる（gemini-2.5-flashモデルを使用）
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[prompt] + uploaded_to_gemini
+                )
                 
                 # 返ってきたJSONテキストを整形してPythonデータに変換
                 json_text = response.text.strip().replace("```json", "").replace("```", "")
@@ -131,7 +132,7 @@ if st.button("データ抽出＆エクセル追記を開始"):
                     ws[f"D{r}"].number_format = 'yyyy/m/d'
                     ws[f"D{r}"].alignment = Alignment(horizontal='right')
                     
-                    # 以下、想定される列にデータを配置（※実際の列が違う場合はここを修正）
+                    # 列配置
                     ws[f"C{r}"] = item.get("category", "")      # 科目
                     ws[f"E{r}"] = item.get("payee", "")         # 支払先
                     ws[f"F{r}"] = item.get("item_details", "")  # 品目・摘要
