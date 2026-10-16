@@ -94,7 +94,7 @@ if st.button("データ抽出＆エクセル追記を開始"):
 
                 # AIに解析を実行させる（gemini-2.5-flashモデルを使用）
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-1.5-flash',
                     contents=[prompt] + uploaded_to_gemini
                 )
                 
