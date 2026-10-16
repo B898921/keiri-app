@@ -17,8 +17,7 @@ with col2:
 
 st.subheader("2. ファイルのアップロード")
 # レシート画像のアップロード（複数枚対応）
-uploaded_images = st.file_uploader("レシート画像をアップロード（複数可）", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
-
+uploaded_images = st.file_uploader("レシート画像または動画をアップロード（複数可）", type=["png", "jpg", "jpeg", "mp4", "mov"], accept_multiple_files=True)
 # マスターエクセルのアップロード
 uploaded_excel = st.file_uploader("マスターエクセル（追記先）をアップロード", type=["xlsx"])
 
