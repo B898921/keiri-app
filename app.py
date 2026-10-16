@@ -21,7 +21,6 @@ st.subheader("2. ファイルのアップロード")
 # レシート画像のアップロード（大文字の拡張子やHEIC形式も追加して表示されない問題を解決）
 uploaded_images = st.file_uploader(
     "レシート画像または動画をアップロード（複数可）", 
-    type=["png", "jpg", "jpeg", "mp4", "mov", "heic", "PNG", "JPG", "JPEG", "MP4", "MOV", "HEIC"], 
     accept_multiple_files=True
 )
 
